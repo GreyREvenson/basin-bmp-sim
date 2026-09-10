@@ -7,9 +7,11 @@ construction of the validated data bundle consumed by the simulation.
 """
 
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Union, Tuple
 from collections import defaultdict
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -104,13 +106,6 @@ from .input_validation import (
 )
 
 
-
-
-
-
-
-
-
 def _merge_csvs(
     paths: Union[str, Path, Sequence[Union[str, Path]]],
     required_cols: Sequence[str],
@@ -119,23 +114,22 @@ def _merge_csvs(
 ) -> pd.DataFrame:
     """Read one or more CSV files and combine them into one table.
 
-        Parameters
-        ----------
-        paths : str, pathlib.Path, or sequence of str or pathlib.Path
-            One or more CSV file paths.
-        required_cols : sequence of str
-            Columns that must be present in every file.
-        label : str
-            Human-readable dataset name used in logs and errors.
-        logger : Any
-            Logger used for progress and duplicate warnings.
+    Parameters
+    ----------
+    paths : str, pathlib.Path, or sequence of str or pathlib.Path
+        One or more CSV file paths.
+    required_cols : sequence of str
+        Columns that must be present in every file.
+    label : str
+        Human-readable dataset name used in logs and errors.
+    logger : Any
+        Logger used for progress and duplicate warnings.
 
-        Returns
-        -------
-        pandas.DataFrame
-            Concatenated dataframe with duplicates removed on the required key
-            columns.
-        
+    Returns
+    -------
+    pandas.DataFrame
+        Concatenated dataframe with duplicates removed on the required key
+        columns.
     """
     paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
     frames: List[pd.DataFrame] = []
@@ -165,20 +159,19 @@ def load_bmp_selection_probabilities(
 ) -> pd.DataFrame:
     """Read and normalize explicit BMP-selection probabilities.
 
-        Parameters
-        ----------
-        path : Union[str, Path]
-            Path to the BMP-selection probability CSV file.
-        cps : Sequence[int]
-            Conservation Practice Standard (CPS) code or codes.
-        logger : Any
-            Logger used for diagnostic and progress messages.
+    Parameters
+    ----------
+    path : Union[str, Path]
+        Path to the BMP-selection probability CSV file.
+    cps : Sequence[int]
+        Conservation Practice Standard (CPS) code or codes.
+    logger : Any
+        Logger used for diagnostic and progress messages.
 
-        Returns
-        -------
-        pd.DataFrame
-            Normalized BMP-selection probability table.
-        
+    Returns
+    -------
+    pd.DataFrame
+        Normalized BMP-selection probability table.
     """
     logger.verbose(f"Reading BMP selection probabilities from {path}")
     df = normalize_columns(read_csv_table(path))
@@ -212,21 +205,21 @@ def load_bmp_selection_probabilities(
     )
     return result
 
+
 def load_trajectory_records(
     path: Union[str, Path],
 ) -> Dict[Tuple[str, str, str, str], List[Tuple[int, float, float]]]:
     """Read and normalize canonical outlet-trajectory records for plotting.
 
-        Parameters
-        ----------
-        path : Union[str, Path]
-            Path to the canonical trajectory Parquet file.
+    Parameters
+    ----------
+    path : Union[str, Path]
+        Path to the canonical trajectory Parquet file.
 
-        Returns
-        -------
-        Dict[Tuple[str, str, str, str], List[Tuple[int, float, float]]]
-            Trajectory records keyed by pollutant, outlet, x-axis, and y-axis definitions.
-        
+    Returns
+    -------
+    Dict[Tuple[str, str, str, str], List[Tuple[int, float, float]]]
+        Trajectory records keyed by pollutant, outlet, x-axis, and y-axis definitions.
     """
     df = read_parquet_table(path)
     validate_trajectory_table(df)
@@ -240,6 +233,7 @@ def load_trajectory_records(
         key = (str(row["pollutant"]), str(row["oid"]), str(row["x_axis"]), str(row["y_axis"]))
         out[key].append((int(row["scenario"]), float(row["x_value"]), float(row["y_value"])))
     return out
+
 
 def _ensure_projected(gdf: gpd.GeoDataFrame, logger: Any) -> gpd.GeoDataFrame:
     """Ensure a geospatial dataframe uses a projected CRS.
@@ -291,7 +285,7 @@ def _normalize_pollutant_column(df: pd.DataFrame, col: str, label: str, logger: 
         raise ValueError(f"{label} missing required column '{col}'")
     try:
         df[col] = [normalize_pollutant_label(x) for x in df[col]]
-    except Exception as ex:  # pylint: disable=broad-except
+    except Exception as ex:
         raise ValueError(f"Failed to normalize pollutant labels in {label}: {ex}") from ex
     return df
 
@@ -299,16 +293,15 @@ def _normalize_pollutant_column(df: pd.DataFrame, col: str, label: str, logger: 
 def _normalize_pathway_label(value: Any) -> str:
     """Return a stable, user-extensible pathway label.
 
-        Parameters
-        ----------
-        value : Any
-            Input value to normalize or evaluate.
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize or evaluate.
 
-        Returns
-        -------
-        str
-            Normalized pathway label.
-        
+    Returns
+    -------
+    str
+        Normalized pathway label.
     """
     label = str(value).strip().lower().replace("_", " ")
     return " ".join(label.split())
@@ -317,29 +310,28 @@ def _normalize_pathway_label(value: Any) -> str:
 def _normalize_pathway_column(df: pd.DataFrame, label: str, logger: Any) -> pd.DataFrame:
     """Normalize pathway labels without restricting user-defined pathways.
 
-        Statistical mode may use any non-empty pathway labels shared by the parcel
-        load-rate and BMP efficiency inputs. PLET/RUSLE-specific pathway restrictions
-        are applied later, after the load-generation mode is known.
+    Statistical mode may use any non-empty pathway labels shared by the parcel
+    load-rate and BMP efficiency inputs. PLET/RUSLE-specific pathway restrictions
+    are applied later, after the load-generation mode is known.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        label : str
-            Context label used in diagnostics and validation errors.
-        logger : Any
-            Logger used for diagnostic and progress messages.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    label : str
+        Context label used in diagnostics and validation errors.
+    logger : Any
+        Logger used for diagnostic and progress messages.
 
-        Returns
-        -------
-        pd.DataFrame
-            Copy of the table with normalized pathway labels.
+    Returns
+    -------
+    pd.DataFrame
+        Copy of the table with normalized pathway labels.
 
-        Raises
-        ------
-        ValueError
-            If any pathway label is blank after normalization.
-        
+    Raises
+    ------
+    ValueError
+        If any pathway label is blank after normalization.
     """
     del logger
     if COL_PATHWAY not in df.columns:
@@ -354,16 +346,15 @@ def _normalize_pathway_column(df: pd.DataFrame, label: str, logger: Any) -> pd.D
 def _nonblank(value: Any) -> bool:
     """Return whether an input cell contains a nonblank value.
 
-        Parameters
-        ----------
-        value : Any
-            Input value to normalize or evaluate.
+    Parameters
+    ----------
+    value : Any
+        Input value to normalize or evaluate.
 
-        Returns
-        -------
-        bool
-            ``True`` when the value is nonblank; otherwise ``False``.
-        
+    Returns
+    -------
+    bool
+        ``True`` when the value is nonblank; otherwise ``False``.
     """
     return value is not None and not pd.isna(value) and str(value).strip() != ""
 
@@ -371,44 +362,38 @@ def _nonblank(value: Any) -> bool:
 def _row_stats_raw(row: Mapping[str, Any]) -> Dict[str, float]:
     """Return normalized numeric statistics from an input row.
 
-        Parameters
-        ----------
-        row : Mapping[str, Any]
-            Input table row.
+    Parameters
+    ----------
+    row : Mapping[str, Any]
+        Input table row.
 
-        Returns
-        -------
-        Dict[str, float]
-            Normalized numeric statistics extracted from the row.
-        
+    Returns
+    -------
+    Dict[str, float]
+        Normalized numeric statistics extracted from the row.
     """
     return stats_from_row(row)
-
-
-
-
 
 
 def load_distribution_catalog(path: Any, logger: Any = None) -> Optional[pd.DataFrame]:
     """Read and validate the optional reusable input-distribution catalog.
 
-        Parameters
-        ----------
-        path : Any
-            Path or paths to reusable distribution-catalog CSV files.
-        logger : Any
-            Logger used for diagnostic and progress messages.
+    Parameters
+    ----------
+    path : Any
+        Path or paths to reusable distribution-catalog CSV files.
+    logger : Any
+        Logger used for diagnostic and progress messages.
 
-        Returns
-        -------
-        Optional[pd.DataFrame]
-            Validated distribution catalog, or ``None`` when no catalog is configured.
+    Returns
+    -------
+    Optional[pd.DataFrame]
+        Validated distribution catalog, or ``None`` when no catalog is configured.
 
-        Raises
-        ------
-        ValueError
-            If a catalog file is missing the required ``distribution_id`` column.
-        
+    Raises
+    ------
+    ValueError
+        If a catalog file is missing the required ``distribution_id`` column.
     """
     if path is None:
         return None
@@ -435,25 +420,25 @@ def resolve_distribution_references(
 ) -> pd.DataFrame:
     """Expand distribution references into inline statistics during input loading.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog, if configured.
-        label : str
-            Context label used in diagnostics and validation errors.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog, if configured.
+    label : str
+        Context label used in diagnostics and validation errors.
 
-        Returns
-        -------
-        pd.DataFrame
-            Table with distribution references expanded to inline statistics.
+    Returns
+    -------
+    pd.DataFrame
+        Table with distribution references expanded to inline statistics.
 
-        Raises
-        ------
-        ValueError
-            If a distribution reference conflicts with inline statistics, is unknown, or cannot be resolved because no catalog is configured.
-        
+    Raises
+    ------
+    ValueError
+        If a distribution reference conflicts with inline statistics, is unknown,
+        or cannot be resolved because no catalog is configured.
     """
     out = df.copy()
     if DISTRIBUTION_ID not in out.columns:
@@ -498,30 +483,25 @@ def resolve_distribution_references(
     return out
 
 
-
-
-
-
-
 def _rows_for_pid(table: Optional[pd.DataFrame], pid: str) -> List[pd.Series]:
     """Resolve wildcard input rows plus parcel-specific overrides for one parcel.
 
-        Parameters
-        ----------
-        table : Optional[pd.DataFrame]
-            Input table containing model data.
-        pid : str
-            Parcel identifier.
+    Parameters
+    ----------
+    table : Optional[pd.DataFrame]
+        Input table containing model data.
+    pid : str
+        Parcel identifier.
 
-        Returns
-        -------
-        List[pd.Series]
-            Rows applicable to the specified parcel.
-        
+    Returns
+    -------
+    List[pd.Series]
+        Rows applicable to the specified parcel.
     """
     if table is None or table.empty:
         return []
     from .plet_rusle import canonical_parameter_name
+
     pids = table[COL_PID].astype(str)
     wildcard_rows = table[pids == "*"]
     exact_rows = table[pids == str(pid)]
@@ -535,30 +515,28 @@ def _rows_for_pid(table: Optional[pd.DataFrame], pid: str) -> List[pd.Series]:
     return [row for _, row in combined.iterrows()]
 
 
-
-
 def _load_plet_hydrology_records(
     lookup_path: Optional[Union[str, Path]],
 ) -> Dict[Tuple[str, str], Tuple[float, float]]:
     """Read and validate fixed PLET CN/infiltration records for deterministic helpers.
 
-        Parameters
-        ----------
-        lookup_path : Optional[Union[str, Path]]
-            Optional path to the PLET hydrology lookup table.
+    Parameters
+    ----------
+    lookup_path : Optional[Union[str, Path]]
+        Optional path to the PLET hydrology lookup table.
 
-        Returns
-        -------
-        Dict[Tuple[str, str], Tuple[float, float]]
-            Hydrology values keyed by normalized land-cover and HSG classes.
+    Returns
+    -------
+    Dict[Tuple[str, str], Tuple[float, float]]
+        Hydrology values keyed by normalized land-cover and HSG classes.
 
-        Raises
-        ------
-        FileNotFoundError
-            If the configured PLET hydrology lookup file does not exist.
-        ValueError
-            If the deterministic lookup is missing required columns or values, contains duplicate rows, or contains stochastic definitions.
-        
+    Raises
+    ------
+    FileNotFoundError
+        If the configured PLET hydrology lookup file does not exist.
+    ValueError
+        If the deterministic lookup is missing required columns or values,
+        contains duplicate rows, or contains stochastic definitions.
     """
     from .plet_rusle import (
         PLET_HYDROLOGY_LOOKUP_PATH,
@@ -598,6 +576,7 @@ def _load_plet_hydrology_records(
     if missing:
         raise ValueError(f"PLET hydrology lookup is missing required columns: {missing}")
     output = {}
+
     for _, row in table.iterrows():
         key = (normalize_plet_land_cover(row["land_cover"]), normalize_plet_hsg(row["hsg"]))
         if key in output:
@@ -609,16 +588,15 @@ def _load_plet_hydrology_records(
 def _plet_parameter_defaults(pollutants: Sequence[str]) -> Dict[str, float]:
     """Return the centralized PLET/RUSLE parameter defaults.
 
-        Parameters
-        ----------
-        pollutants : Sequence[str]
-            Pollutant names in model order.
+    Parameters
+    ----------
+    pollutants : Sequence[str]
+        Pollutant names in model order.
 
-        Returns
-        -------
-        Dict[str, float]
-            Centralized default PLET/RUSLE parameter values.
-        
+    Returns
+    -------
+    Dict[str, float]
+        Centralized default PLET/RUSLE parameter values.
     """
     defaults: Dict[str, float] = {
         "annual_precip_in": 0.0,
@@ -643,18 +621,17 @@ def apply_plet_parameter_defaults(
 ) -> Dict[str, Any]:
     """Return a parameter mapping with centralized PLET/RUSLE defaults applied.
 
-        Parameters
-        ----------
-        parameters : Mapping[str, Any]
-            Model parameter values keyed by canonical parameter name.
-        pollutants : Sequence[str]
-            Pollutant names in model order.
+    Parameters
+    ----------
+    parameters : Mapping[str, Any]
+        Model parameter values keyed by canonical parameter name.
+    pollutants : Sequence[str]
+        Pollutant names in model order.
 
-        Returns
-        -------
-        Dict[str, Any]
-            Parameter mapping with centralized defaults applied.
-        
+    Returns
+    -------
+    Dict[str, Any]
+        Parameter mapping with centralized defaults applied.
     """
     out = dict(parameters)
     for parameter, value in _plet_parameter_defaults(pollutants).items():
@@ -669,18 +646,17 @@ def _append_parameter_defaults(
 ) -> pd.DataFrame:
     """Append wildcard PLET parameter defaults before scenario sampling.
 
-        Parameters
-        ----------
-        table : pd.DataFrame
-            Input table containing model data.
-        pollutants : Sequence[str]
-            Pollutant names in model order.
+    Parameters
+    ----------
+    table : pd.DataFrame
+        Input table containing model data.
+    pollutants : Sequence[str]
+        Pollutant names in model order.
 
-        Returns
-        -------
-        pd.DataFrame
-            Table containing explicit wildcard default rows.
-        
+    Returns
+    -------
+    pd.DataFrame
+        Table containing explicit wildcard default rows.
     """
     defaults = _plet_parameter_defaults(pollutants)
     out = table.copy()
@@ -703,20 +679,17 @@ def _append_parameter_defaults(
     return out
 
 
-
-
 def _set_case_insensitive_default(mapping: Dict[str, Any], key: str, value: Any) -> None:
     """Set one input default while respecting existing case-insensitive keys.
 
-        Parameters
-        ----------
-        mapping : Dict[str, Any]
-            Input mapping.
-        key : str
-            Configuration or mapping key.
-        value : Any
-            Input value to normalize or evaluate.
-        
+    Parameters
+    ----------
+    mapping : Dict[str, Any]
+        Input mapping.
+    key : str
+        Configuration or mapping key.
+    value : Any
+        Input value to normalize or evaluate.
     """
     matching_key = next((existing for existing in mapping if str(existing).lower() == key.lower()), None)
     if matching_key is None:
@@ -728,11 +701,10 @@ def _set_case_insensitive_default(mapping: Dict[str, Any], key: str, value: Any)
 def apply_config_defaults(cfg: Dict[str, Any]) -> None:
     """Apply all supported top-level configuration defaults in one place.
 
-        Parameters
-        ----------
-        cfg : Dict[str, Any]
-            Normalized model configuration mapping.
-        
+    Parameters
+    ----------
+    cfg : Dict[str, Any]
+        Normalized model configuration mapping.
     """
     _set_case_insensitive_default(cfg, CFG_N_SCENARIOS, 1)
     _set_case_insensitive_default(cfg, CFG_OUTPUTS, "./outputs")
@@ -743,8 +715,6 @@ def apply_config_defaults(cfg: Dict[str, Any]) -> None:
     _set_case_insensitive_default(cfg, CFG_BMP_FAIL_REDUCTION, DEFAULT_BMP_FAIL_REDUCTION)
     _set_case_insensitive_default(cfg, CFG_PARALLEL, {"n_jobs": 1})
     _set_case_insensitive_default(cfg, CFG_LOAD_GENERATION, {})
-
-
 
 
 def normalize_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -776,27 +746,25 @@ def normalize_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return cfg
 
 
-
 def _load_parameter_stats_table(path: Any, label: str, logger: Any, distribution_catalog: Optional[pd.DataFrame] = None) -> Optional[pd.DataFrame]:
     """Load a parcel parameter statistics table.
 
-        Parameters
-        ----------
-        path : Any
-            CSV file path or sequence of paths.
-        label : str
-            Dataset label used in logs and errors.
-        logger : Any
-            Logger used for progress reporting.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    path : Any
+        CSV file path or sequence of paths.
+    label : str
+        Dataset label used in logs and errors.
+    logger : Any
+        Logger used for progress reporting.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame or None
-            Loaded parameter statistics table, or ``None`` when no path is
-            provided.
-        
+    Returns
+    -------
+    pandas.DataFrame or None
+        Loaded parameter statistics table, or ``None`` when no path is
+        provided.
     """
     if path is None:
         return None
@@ -818,33 +786,31 @@ def _load_plet_parameter_table(
 ) -> Optional[pd.DataFrame]:
     """Load PLET numeric parameters and required categorical classifications.
 
-        Unlike the general parameter loader, this function permits fixed string
-        values for ``land_cover`` and ``hsg`` while retaining the existing
-        distribution-statistics behavior for all numeric parameters.
+    Unlike the general parameter loader, this function permits fixed string
+    values for ``land_cover`` and ``hsg`` while retaining the existing
+    distribution-statistics behavior for all numeric parameters.
 
-        Parameters
-        ----------
-        path : Any
-            CSV file path or sequence of paths.
-        parcel_ids : sequence of str
-            Parcel identifiers that may be selected by the model.
-        logger : Any
-            Logger used for progress reporting.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    path : Any
+        CSV file path or sequence of paths.
+    parcel_ids : sequence of str
+        Parcel identifiers that may be selected by the model.
+    logger : Any
+        Logger used for progress reporting.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame or None
-            Validated PLET parameter table, or ``None`` when no path is provided.
+    Returns
+    -------
+    pandas.DataFrame or None
+        Validated PLET parameter table, or ``None`` when no path is provided.
 
-        Raises
-        ------
-        ValueError
-            If fixed PLET land-cover or HSG classifications are supplied as distributions.
-        
+    Raises
+    ------
+    ValueError
+        If fixed PLET land-cover or HSG classifications are supplied as distributions.
     """
-
     if path is None:
         return None
     from .plet_rusle import canonical_parameter_name, PLET_CLASSIFICATION_PARAMETERS
@@ -859,8 +825,6 @@ def _load_plet_parameter_table(
         bad = categorical_rows[DISTRIBUTION_ID].notna() & categorical_rows[DISTRIBUTION_ID].astype(str).str.strip().ne("")
         if bad.any():
             raise ValueError("PLET land_cover and hsg are classifications and must use fixed value, not distribution_id")
-    # Classification rows are intentionally deterministic. Reject numeric
-    # distribution columns rather than silently ignoring them.
     categorical_stat_cols = [
         col for col in statistic_columns(categorical_rows.columns) if str(col).strip().lower() != "value"
     ]
@@ -889,30 +853,29 @@ def _load_plet_hydrology_lookup(
 ) -> pd.DataFrame:
     """Load required land-cover/HSG hydrology distributions for PLET mode.
 
-        The table is long-form with one row per ``land_cover`` x ``hsg`` x
-        ``parameter``. Exactly two parameters are required for every supported
-        pairing: ``cn`` and ``infiltration_fraction``. Each row follows the same
-        fixed-value/distribution schema as other numeric model inputs.
+    The table is long-form with one row per ``land_cover`` x ``hsg`` x
+    ``parameter``. Exactly two parameters are required for every supported
+    pairing: ``cn`` and ``infiltration_fraction``. Each row follows the same
+    fixed-value/distribution schema as other numeric model inputs.
 
-        Parameters
-        ----------
-        path : Any
-            Path to the required PLET hydrology lookup CSV file.
-        logger : Any
-            Logger used for diagnostic and progress messages.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    path : Any
+        Path to the required PLET hydrology lookup CSV file.
+    logger : Any
+        Logger used for diagnostic and progress messages.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pd.DataFrame
-            Validated PLET hydrology lookup table.
+    Returns
+    -------
+    pd.DataFrame
+        Validated PLET hydrology lookup table.
 
-        Raises
-        ------
-        ValueError
-            If the required hydrology lookup is absent, contains unsupported parameters, or lacks required land-cover/HSG coverage.
-        
+    Raises
+    ------
+    ValueError
+        If the required hydrology lookup is absent, contains unsupported parameters, or lacks required land-cover/HSG coverage.
     """
     if path is None:
         raise ValueError(
@@ -992,23 +955,22 @@ def _load_plet_hydrology_lookup(
 def _load_pollutant_concentrations(path: Any, pollutants: List[str], logger: Any, distribution_catalog: Optional[pd.DataFrame] = None) -> Optional[pd.DataFrame]:
     """Load parcel pollutant concentration inputs.
 
-        Parameters
-        ----------
-        path : Any
-            CSV file path or sequence of paths.
-        pollutants : list[str]
-            Pollutant names to retain.
-        logger : Any
-            Logger used for progress reporting.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    path : Any
+        CSV file path or sequence of paths.
+    pollutants : list[str]
+        Pollutant names to retain.
+    logger : Any
+        Logger used for progress reporting.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame or None
-            Filtered pollutant concentration table, or ``None`` when no path is
-            provided.
-        
+    Returns
+    -------
+    pandas.DataFrame or None
+        Filtered pollutant concentration table, or ``None`` when no path is
+        provided.
     """
     if path is None:
         return None
@@ -1025,23 +987,22 @@ def _load_pollutant_concentrations(path: Any, pollutants: List[str], logger: Any
 def _load_groundwater_concentrations(path: Any, pollutants: List[str], logger: Any, distribution_catalog: Optional[pd.DataFrame] = None) -> Optional[pd.DataFrame]:
     """Load optional parcel groundwater concentration inputs.
 
-        Parameters
-        ----------
-        path : Any
-            CSV file path or sequence of paths.
-        pollutants : list[str]
-            Pollutant names to retain.
-        logger : Any
-            Logger used for progress reporting.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    path : Any
+        CSV file path or sequence of paths.
+    pollutants : list[str]
+        Pollutant names to retain.
+    logger : Any
+        Logger used for progress reporting.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame or None
-            Filtered groundwater concentration table, or ``None`` when no path is
-            provided.
-        
+    Returns
+    -------
+    pandas.DataFrame or None
+        Filtered groundwater concentration table, or ``None`` when no path is
+        provided.
     """
     if path is None:
         return None
@@ -1053,7 +1014,6 @@ def _load_groundwater_concentrations(path: Any, pollutants: List[str], logger: A
     df = resolve_distribution_references(df, distribution_catalog, LOAD_GROUNDWATER_CONCENTRATIONS)
     validate_stats_rows(df, LOAD_GROUNDWATER_CONCENTRATIONS)
     return df
-
 
 
 def _load_pollutants(cfg: Dict[str, Any]) -> List[str]:
@@ -1232,16 +1192,15 @@ def _build_parcel_up_map(
     def resolve_pid(value: Any) -> str:
         """Match numeric CSV values such as ``4.0`` to parcel ID ``4``.
 
-                Parameters
-                ----------
-                value : Any
-                    Input value to normalize or evaluate.
+        Parameters
+        ----------
+        value : Any
+            Input value to normalize or evaluate.
 
-                Returns
-                -------
-                str
-                    Normalized parcel identifier.
-                
+        Returns
+        -------
+        str
+            Normalized parcel identifier.
         """
         pid = str(value).strip()
         if pid in valid_pids:
@@ -1260,10 +1219,6 @@ def _build_parcel_up_map(
         raw_upstream = row[COL_PID_UP]
         pid_text = str(raw_pid).strip()
         if pid_text == "*":
-            # A wildcard is intentionally limited to the unambiguous default
-            # case: parcels have no upstream parcels unless an exact pid row
-            # says otherwise. The map is initialized to [] for every parcel,
-            # so no physical expansion of the wildcard row is required.
             upstream_is_blank = pd.isna(raw_upstream) or not str(raw_upstream).strip()
             if not upstream_is_blank:
                 raise ValueError(
@@ -1324,47 +1279,48 @@ def _expand_pid_defaults(
 ) -> pd.DataFrame:
     """Expand ``pid='*'`` defaults to modeled parcels.
 
-        Exact parcel rows override wildcard defaults. When ``key_columns`` is an
-        empty sequence, at most one row may be defined for the wildcard and for
-        each exact parcel (used by ``parcel_p``). When one or more key columns are
-        supplied, overrides are resolved independently for each key combination
-        (used by ``delivery_ratios`` with ``oid``). When ``key_columns`` is
-        ``None``, rows are treated as a parcel-level group: if a parcel has any
-        explicit rows, those rows replace the wildcard group entirely (used by
-        ``parcel_out``).
+    Exact parcel rows override wildcard defaults. When ``key_columns`` is an
+    empty sequence, at most one row may be defined for the wildcard and for
+    each exact parcel (used by ``parcel_p``). When one or more key columns are
+    supplied, overrides are resolved independently for each key combination
+    (used by ``delivery_ratios`` with ``oid``). When ``key_columns`` is
+    ``None``, rows are treated as a parcel-level group: if a parcel has any
+    explicit rows, those rows replace the wildcard group entirely (used by
+    ``parcel_out``).
 
-        Rows whose exact parcel IDs are not present in the clipped parcel layer are
-        removed with a warning. If no wildcard row is present, the function simply
-        returns the valid exact rows, preserving subset behavior.
+    Rows whose exact parcel IDs are not present in the clipped parcel layer are
+    removed with a warning. If no wildcard row is present, the function simply
+    returns the valid exact rows, preserving subset behavior.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        parcel_ids : Sequence[str]
-            Parcel identifiers in model order.
-        label : str
-            Context label used in diagnostics and validation errors.
-        logger : Any
-            Logger used for diagnostic and progress messages.
-        key_columns : Optional[Sequence[str]]
-            Columns that, together with parcel ID, identify an input row.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    parcel_ids : Sequence[str]
+        Parcel identifiers in model order.
+    label : str
+        Context label used in diagnostics and validation errors.
+    logger : Any
+        Logger used for diagnostic and progress messages.
+    key_columns : Optional[Sequence[str]]
+        Columns that, together with parcel ID, identify an input row.
 
-        Returns
-        -------
-        pd.DataFrame
-            Table with wildcard parcel defaults expanded to modeled parcels.
+    Returns
+    -------
+    pd.DataFrame
+        Table with wildcard parcel defaults expanded to modeled parcels.
 
-        Raises
-        ------
-        ValueError
-            If wildcard defaults are ambiguous or parcel-specific rows are duplicated after expansion.
-        
+    Raises
+    ------
+    ValueError
+        If wildcard defaults are ambiguous or parcel-specific rows are duplicated after expansion.
     """
     out = df.copy()
     out[COL_PID] = out[COL_PID].astype(str).str.strip()
+
     ordered_pids = [str(pid).strip() for pid in parcel_ids]
     valid_pids = set(ordered_pids)
+
     valid_mask = out[COL_PID].isin(valid_pids | {"*"})
     removed = out.loc[~valid_mask]
     if not removed.empty:
@@ -1380,7 +1336,6 @@ def _expand_pid_defaults(
     defaults = out[out[COL_PID] == "*"].copy()
     exact = out[out[COL_PID] != "*"].copy()
 
-    # Validate exact/default row uniqueness even when no wildcard row exists.
     if key_columns is not None:
         keys = list(key_columns)
         if keys:
@@ -1419,16 +1374,15 @@ def _expand_pid_defaults(
         def _key(row: pd.Series) -> Tuple[Any, ...]:
             """Return a stable composite key for an input row.
 
-                        Parameters
-                        ----------
-                        row : pd.Series
-                            Input table row.
+            Parameters
+            ----------
+            row : pd.Series
+                Input table row.
 
-                        Returns
-                        -------
-                        Tuple[Any, ...]
-                            Composite key used to identify an input row.
-                        
+            Returns
+            -------
+            Tuple[Any, ...]
+                Composite key used to identify an input row.
             """
             return tuple(row[column] for column in keys)
 
@@ -1447,6 +1401,7 @@ def _expand_pid_defaults(
     if not expanded:
         return out.iloc[0:0].copy().reset_index(drop=True)
     return pd.DataFrame(expanded, columns=out.columns).reset_index(drop=True)
+
 
 def _load_parcel_outlets(cfg: Dict[str, Any], logger: Any) -> pd.DataFrame:
     """Load parcel-to-outlet relationships.
@@ -1516,7 +1471,6 @@ def _load_parcel_selection(cfg: Dict[str, Any], parcels: pd.DataFrame, logger: A
             raise ValueError(f"{CFG_PARCEL_P} selection weights sum to zero or negative")
         df[COL_PROBABILITY] /= total_prob
         return df[[COL_PID, COL_PROBABILITY]].copy()
-    # synthesize uniform
     return pd.DataFrame({COL_PID: parcels[COL_PID].values, COL_PROBABILITY: np.full(len(parcels), 1 / len(parcels))})
 
 
@@ -1657,6 +1611,33 @@ def _efficiency_stat_columns(df: pd.DataFrame) -> List[str]:
     ]
 
 
+def _plet_numeric_spec_columns(df: pd.DataFrame) -> List[str]:
+    """Return standardized numeric-specification columns present in a BMP-efficiency table.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        BMP-efficiency input table.
+
+    Returns
+    -------
+    list[str]
+        Numeric-specification columns present in the table.
+    """
+    candidates = [
+        "value",
+        "distribution_id",
+        "mean",
+        "sd",
+        "min",
+        "p05",
+        "p50",
+        "p95",
+        "max",
+    ]
+    return [col for col in candidates if col in df.columns]
+
+
 def _complete_bmp_efficiency_coverage(
     df: pd.DataFrame,
     cps: Sequence[int],
@@ -1665,31 +1646,30 @@ def _complete_bmp_efficiency_coverage(
 ) -> pd.DataFrame:
     """Legacy three-path completion used by the public loader API.
 
-        Surface is required. Missing shallow/deep subsurface values are completed
-        as fixed zero distributions with verbose logging. Production mode-specific
-        validation bypasses this compatibility layer.
+    Surface is required. Missing shallow/deep subsurface values are completed
+    as fixed zero distributions with verbose logging. Production mode-specific
+    validation bypasses this compatibility layer.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        cps : Sequence[int]
-            Conservation Practice Standard (CPS) code or codes.
-        pollutants : Sequence[str]
-            Pollutant names in model order.
-        logger : Any
-            Logger used for diagnostic and progress messages.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    cps : Sequence[int]
+        Conservation Practice Standard (CPS) code or codes.
+    pollutants : Sequence[str]
+        Pollutant names in model order.
+    logger : Any
+        Logger used for diagnostic and progress messages.
 
-        Returns
-        -------
-        pd.DataFrame
-            BMP efficiency table with complete legacy pathway coverage.
+    Returns
+    -------
+    pd.DataFrame
+        BMP efficiency table with complete legacy pathway coverage.
 
-        Raises
-        ------
-        ValueError
-            If required surface-efficiency coverage is missing for a configured CPS/pollutant combination.
-        
+    Raises
+    ------
+    ValueError
+        If required surface-efficiency coverage is missing for a configured CPS/pollutant combination.
     """
     completed = df.copy()
     completed[COL_CPS] = completed[COL_CPS].astype(int)
@@ -1774,37 +1754,35 @@ def _complete_bmp_efficiency_coverage(
     return completed.reset_index(drop=True)
 
 
-
-
 def _complete_plet_bmp_efficiency_coverage(
     df: pd.DataFrame, cps: Sequence[int], pollutants: Sequence[str], logger: Any
 ) -> pd.DataFrame:
     """Require PLET surface efficiencies and default missing subsurface to zero.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        cps : Sequence[int]
-            Conservation Practice Standard (CPS) code or codes.
-        pollutants : Sequence[str]
-            Pollutant names in model order.
-        logger : Any
-            Logger used for diagnostic and progress messages.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    cps : Sequence[int]
+        Conservation Practice Standard (CPS) code or codes.
+    pollutants : Sequence[str]
+        Pollutant names in model order.
+    logger : Any
+        Logger used for diagnostic and progress messages.
 
-        Returns
-        -------
-        pd.DataFrame
-            BMP efficiency table with required PLET pathway coverage.
+    Returns
+    -------
+    pd.DataFrame
+        BMP efficiency table with required PLET pathway coverage.
 
-        Raises
-        ------
-        ValueError
-            If PLET/RUSLE surface-efficiency coverage is missing for a configured CPS/pollutant combination.
-        
+    Raises
+    ------
+    ValueError
+        If PLET/RUSLE surface-efficiency coverage is missing for a configured CPS/pollutant combination.
     """
     completed = df.copy()
     completed[COL_CPS] = completed[COL_CPS].astype(int)
+
     if COL_PATHWAY not in completed.columns:
         completed[COL_PATHWAY] = "surface"
         logger.verbose(
@@ -1812,6 +1790,7 @@ def _complete_plet_bmp_efficiency_coverage(
             "CPS x pollutant rows as surface efficiencies"
         )
     else:
+        completed[COL_PATHWAY] = completed[COL_PATHWAY].astype(str).str.strip().str.lower()
         unexpected = sorted(
             set(completed[COL_PATHWAY].astype(str)) - set(PLET_PATHWAY_VALUES)
         )
@@ -1827,9 +1806,11 @@ def _complete_plet_bmp_efficiency_coverage(
     validate_unique_rows(
         completed, [COL_CPS, COL_POLLUTANT, COL_PATHWAY], CFG_BMP_EFFICIENCY
     )
-    stat_columns = _efficiency_stat_columns(completed)
+
+    numeric_cols = _plet_numeric_spec_columns(completed)
     added_rows: List[pd.Series] = []
     missing_surface: List[Tuple[int, str]] = []
+
     for cps_code in [int(x) for x in cps]:
         for pollutant in [str(x) for x in pollutants]:
             pair = (completed[COL_CPS] == cps_code) & (completed[COL_POLLUTANT] == pollutant)
@@ -1837,16 +1818,32 @@ def _complete_plet_bmp_efficiency_coverage(
             if surf.empty:
                 missing_surface.append((cps_code, pollutant))
                 continue
+
             sub = completed[pair & (completed[COL_PATHWAY] == "subsurface")]
             sub_has_stats = False
             if not sub.empty:
                 row = sub.iloc[0]
-                sub_has_stats = any(not pd.isna(row.get(c)) for c in stat_columns)
+                sub_has_stats = any(not pd.isna(row.get(c)) for c in numeric_cols)
+
             if not sub_has_stats:
                 template = surf.iloc[0].copy()
                 template[COL_PATHWAY] = "subsurface"
-                for c in stat_columns:
-                    template[c] = 0.0
+                for c in numeric_cols:
+                    template[c] = pd.NA
+                if "value" in numeric_cols:
+                    template["value"] = 0.0
+                if COL_UNIT in template.index:
+                    template[COL_UNIT] = "fraction"
+                if "notes" in template.index:
+                    prior = template["notes"]
+                    auto_note = (
+                        "Auto-added in plet_rusle: missing subsurface efficiency defaults to 0"
+                    )
+                    template["notes"] = (
+                        auto_note
+                        if pd.isna(prior) or str(prior).strip() == ""
+                        else f"{prior}; {auto_note}"
+                    )
                 if not sub.empty:
                     completed = completed.drop(index=sub.index)
                 added_rows.append(template)
@@ -1854,22 +1851,24 @@ def _complete_plet_bmp_efficiency_coverage(
                     "plet_rusle: no correctly labeled subsurface BMP efficiency was "
                     f"defined for cps={cps_code}, pollutant={pollutant}; assuming efficiency=0"
                 )
+
     if missing_surface:
         details = ", ".join(f"cps={c}, pollutant={p}" for c, p in missing_surface)
         raise ValueError(
             "plet_rusle requires a surface bmp_efficiency for every configured "
             f"CPS x pollutant combination; missing: {details}"
         )
+
     if added_rows:
-        completed = pd.concat([completed, pd.DataFrame(added_rows)], ignore_index=True)
+        completed = pd.concat([completed, pd.DataFrame(added_rows, columns=completed.columns)], ignore_index=True)
+
     validate_stats_rows(completed, CFG_BMP_EFFICIENCY)
+
     order = {"surface": 0, "subsurface": 1}
     completed["_pathway_order"] = completed[COL_PATHWAY].map(order)
     return completed.sort_values(
         [COL_CPS, COL_POLLUTANT, "_pathway_order"], kind="stable"
     ).drop(columns="_pathway_order").reset_index(drop=True)
-
-
 
 
 def _load_bmp_efficiency(
@@ -1883,35 +1882,34 @@ def _load_bmp_efficiency(
 ) -> pd.DataFrame:
     """Load and normalize BMP effectiveness inputs.
 
-        ``complete_legacy=True`` preserves the public three-path loader behavior
-        used by existing callers/tests. The main model loader passes ``False`` and
-        then performs mode-specific validation for PLET/RUSLE or statistical mode.
+    ``complete_legacy=True`` preserves the public three-path loader behavior
+    used by existing callers/tests. The main model loader passes ``False`` and
+    then performs mode-specific validation for PLET/RUSLE or statistical mode.
 
-        Parameters
-        ----------
-        cfg : Dict[str, Any]
-            Normalized model configuration mapping.
-        cps : List[int]
-            Conservation Practice Standard (CPS) code or codes.
-        pollutants : List[str]
-            Pollutant names in model order.
-        logger : Any
-            Logger used for diagnostic and progress messages.
-        complete_legacy : bool
-            Whether to complete legacy three-pathway BMP efficiency coverage.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    cfg : Dict[str, Any]
+        Normalized model configuration mapping.
+    cps : List[int]
+        Conservation Practice Standard (CPS) code or codes.
+    pollutants : List[str]
+        Pollutant names in model order.
+    logger : Any
+        Logger used for diagnostic and progress messages.
+    complete_legacy : bool
+        Whether to complete legacy three-pathway BMP efficiency coverage.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pd.DataFrame
-            Normalized BMP efficiency table.
+    Returns
+    -------
+    pd.DataFrame
+        Normalized BMP efficiency table.
 
-        Raises
-        ------
-        ValueError
-            If no BMP-efficiency records remain for the configured CPS codes and pollutants.
-        
+    Raises
+    ------
+    ValueError
+        If no BMP-efficiency records remain for the configured CPS codes and pollutants.
     """
     df = _merge_csvs(ci_get(cfg, CFG_BMP_EFFICIENCY), [COL_CPS, COL_POLLUTANT], CFG_BMP_EFFICIENCY, logger)
     df = _normalize_pollutant_column(df, COL_POLLUTANT, CFG_BMP_EFFICIENCY, logger)
@@ -1921,35 +1919,30 @@ def _load_bmp_efficiency(
     if df.empty:
         raise ValueError("bmp_efficiency has no records for specified cps+pollutants")
 
-    # Delay statistic validation until pathway coverage is resolved. PLET/RUSLE
-    # and the legacy public loader intentionally allow a blank subsurface row,
-    # which is converted to a fixed zero efficiency by their completion logic.
-    # Statistical mode performs its own strict validation after coverage checks,
-    # so blank statistical-mode efficiencies still fail as intended.
     if complete_legacy:
         return _complete_bmp_efficiency_coverage(df, cps, pollutants, logger)
     return df
 
+
 def _load_bmp_cost(cfg: Dict[str, Any], cps: List[int], logger: Any, distribution_catalog: Optional[pd.DataFrame] = None) -> Optional[pd.DataFrame]:
     """Optionally load BMP cost inputs.
 
-        Parameters
-        ----------
-        cfg : dict[str, Any]
-            Configuration mapping.
-        cps : list[int]
-            BMP CPS codes to retain.
-        logger : Any
-            Logger used for progress and warning messages.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    cfg : dict[str, Any]
+        Configuration mapping.
+    cps : list[int]
+        BMP CPS codes to retain.
+    logger : Any
+        Logger used for progress and warning messages.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame or None
-            BMP cost table filtered to the requested BMPs, or ``None`` when no
-            usable cost table is configured.
-        
+    Returns
+    -------
+    pandas.DataFrame or None
+        BMP cost table filtered to the requested BMPs, or ``None`` when no
+        usable cost table is configured.
     """
     path = ci_get(cfg, CFG_BMP_COST)
     if path is None:
@@ -1971,24 +1964,23 @@ def _expand_pollutant_load_rate_defaults(
 ) -> pd.DataFrame:
     """Expand ``pid='*'`` load-rate defaults while preserving exact overrides.
 
-        This lets large statistical-mode applications define one distribution for
-        many or all parcels and add only the parcel-specific exceptions. Exact
-        parcel rows override wildcard rows for the same pollutant/pathway.
+    This lets large statistical-mode applications define one distribution for
+    many or all parcels and add only the parcel-specific exceptions. Exact
+    parcel rows override wildcard rows for the same pollutant/pathway.
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table to process.
-        parcel_ids : Sequence[str]
-            Parcel identifiers in model order.
-        pollutants : Sequence[str]
-            Pollutant names in model order.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input table to process.
+    parcel_ids : Sequence[str]
+        Parcel identifiers in model order.
+    pollutants : Sequence[str]
+        Pollutant names in model order.
 
-        Returns
-        -------
-        pd.DataFrame
-            Load-rate table with wildcard parcel defaults expanded.
-        
+    Returns
+    -------
+    pd.DataFrame
+        Load-rate table with wildcard parcel defaults expanded.
     """
     out = df.copy()
     out[COL_PID] = out[COL_PID].astype(str)
@@ -2039,29 +2031,28 @@ def _expand_pollutant_load_rate_defaults(
 def _load_pollutant_load_rate(cfg: Dict[str, Any], parcels: pd.DataFrame, pollutants: List[str], logger: Any, distribution_catalog: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """Load parcel pollutant load rates for non-PLET mode.
 
-        Parameters
-        ----------
-        cfg : dict[str, Any]
-            Configuration mapping.
-        parcels : pandas.DataFrame
-            Parcel table used to filter valid IDs.
-        pollutants : list[str]
-            Pollutants to retain.
-        logger : Any
-            Logger used for progress reporting.
-        distribution_catalog : Optional[pd.DataFrame]
-            Reusable distribution catalog used to resolve referenced statistics.
+    Parameters
+    ----------
+    cfg : dict[str, Any]
+        Configuration mapping.
+    parcels : pandas.DataFrame
+        Parcel table used to filter valid IDs.
+    pollutants : list[str]
+        Pollutants to retain.
+    logger : Any
+        Logger used for progress reporting.
+    distribution_catalog : Optional[pd.DataFrame]
+        Reusable distribution catalog used to resolve referenced statistics.
 
-        Returns
-        -------
-        pandas.DataFrame
-            Parcel pollutant load rate table filtered to valid parcels and pollutants.
+    Returns
+    -------
+    pandas.DataFrame
+        Parcel pollutant load rate table filtered to valid parcels and pollutants.
 
-        Raises
-        ------
-        ValueError
-            If no pollutant load-rate records remain for the modeled parcels and pollutants.
-        
+    Raises
+    ------
+    ValueError
+        If no pollutant load-rate records remain for the modeled parcels and pollutants.
     """
     df = _merge_csvs(ci_get(cfg, CFG_POLLUTANT_LOAD_RATE), [COL_PID, COL_POLLUTANT], CFG_POLLUTANT_LOAD_RATE, logger)
     df = _normalize_pollutant_column(df, COL_POLLUTANT, CFG_POLLUTANT_LOAD_RATE, logger)
@@ -2078,33 +2069,30 @@ def _load_pollutant_load_rate(cfg: Dict[str, Any], parcels: pd.DataFrame, pollut
     return df
 
 
-
-
-
 def _resolve_aggregate_pathway_fractions(
     cfg: Dict[str, Any], load_generation: Dict[str, Any], pathways: Sequence[str]
 ) -> Dict[str, float]:
     """Resolve fractions used to split one sampled aggregate parcel load rate.
 
-        Parameters
-        ----------
-        cfg : Dict[str, Any]
-            Normalized model configuration mapping.
-        load_generation : Dict[str, Any]
-            Load-generation configuration mapping.
-        pathways : Sequence[str]
-            Pollutant transport pathway names.
+    Parameters
+    ----------
+    cfg : Dict[str, Any]
+        Normalized model configuration mapping.
+    load_generation : Dict[str, Any]
+        Load-generation configuration mapping.
+    pathways : Sequence[str]
+        Pollutant transport pathway names.
 
-        Returns
-        -------
-        Dict[str, float]
-            Normalized pathway fractions keyed by pathway name.
+    Returns
+    -------
+    Dict[str, float]
+        Normalized pathway fractions keyed by pathway name.
 
-        Raises
-        ------
-        ValueError
-            If pathway fractions are malformed, reference unknown pathways, fall outside ``[0, 1]``, or do not sum to one.
-        
+    Raises
+    ------
+    ValueError
+        If pathway fractions are malformed, reference unknown pathways, fall
+        outside ``[0, 1]``, or do not sum to one.
     """
     pathways = list(pathways)
     if len(pathways) == 1:
@@ -2118,8 +2106,6 @@ def _resolve_aggregate_pathway_fractions(
             raise ValueError(f"{CFG_POLLUTANT_LOAD_RATE_PATHWAY_FRACTIONS} must be a mapping")
         fractions = {_normalize_pathway_label(k): float(v) for k, v in raw.items()}
     else:
-        # Shorthand pathway fractions. A shallow fraction alone means the
-        # remaining aggregate load rate is surface load.
         surf_raw = ci_get(cfg, CFG_POLLUTANT_LOAD_RATE_FRAC_SURFACE)
         shallow_raw = ci_get(cfg, CFG_POLLUTANT_LOAD_RATE_FRAC_SHALLOW)
         if surf_raw is not None:
@@ -2153,31 +2139,28 @@ def _resolve_aggregate_pathway_fractions(
     return {path: float(fractions[path]) for path in pathways}
 
 
-
-
 def _complete_delivery_ratio_defaults(
     delivery_ratios: Optional[pd.DataFrame],
     parcel_out_map: Mapping[str, Sequence[str]],
 ) -> pd.DataFrame:
     """Return a complete parcel/outlet delivery table with neutral defaults.
 
-        Parameters
-        ----------
-        delivery_ratios : Optional[pd.DataFrame]
-            Parcel-to-outlet delivery-ratio table, if configured.
-        parcel_out_map : Mapping[str, Sequence[str]]
-            Mapping from parcel IDs to connected outlet IDs.
+    Parameters
+    ----------
+    delivery_ratios : Optional[pd.DataFrame]
+        Parcel-to-outlet delivery-ratio table, if configured.
+    parcel_out_map : Mapping[str, Sequence[str]]
+        Mapping from parcel IDs to connected outlet IDs.
 
-        Returns
-        -------
-        pd.DataFrame
-            Complete parcel-to-outlet delivery-ratio table.
+    Returns
+    -------
+    pd.DataFrame
+        Complete parcel-to-outlet delivery-ratio table.
 
-        Raises
-        ------
-        ValueError
-            If any configured delivery-ratio value lies outside ``[0, 1]``.
-        
+    Raises
+    ------
+    ValueError
+        If any configured delivery-ratio value lies outside ``[0, 1]``.
     """
     columns = [COL_PID, COL_OID, COL_SDR_F_TO_S, COL_SDR_S_TO_O, COL_NDR_F_TO_S, COL_NDR_S_TO_O]
     if delivery_ratios is None:
@@ -2209,6 +2192,7 @@ def _complete_delivery_ratio_defaults(
             out, [column], FRACTION_DOMAIN, CFG_DELIVERY_RATIOS
         )
     return out.reset_index(drop=True)
+
 
 def load_and_validate_all(cfg: Dict[str, Any], logger: Any) -> Dict[str, Any]:
     """Load, validate, and assemble all scenario inputs.
@@ -2251,15 +2235,11 @@ def load_and_validate_all(cfg: Dict[str, Any], logger: Any) -> Dict[str, Any]:
         )
         sel = _load_parcel_selection(cfg, parcels, logger)
 
-        # Upstream list mapping. A pid_up cell may contain multiple
-        # comma-separated IDs, matching the format written by
-        # examples/utils/create_parcel_up.py.
         parcel_up_map = _build_parcel_up_map(
             up,
             parcels[COL_PID].astype(str).tolist(),
         )
 
-        # Parcel->outlet mapping
         parcel_out_map: Dict[str, List[str]] = {}
         for pid in parcels[COL_PID].astype(str):
             oids: List[str] = []
@@ -2283,8 +2263,6 @@ def load_and_validate_all(cfg: Dict[str, Any], logger: Any) -> Dict[str, Any]:
             raise ValueError(f"Unsupported load_generation mode: {load_mode}")
         load_generation["mode"] = load_mode
 
-        # One optional catalog can define reusable numeric distributions for
-        # any model input table. References are expanded during input loading.
         distribution_catalog = load_distribution_catalog(
             ci_get(cfg, CFG_INPUT_DISTRIBUTIONS), logger
         )
@@ -2343,10 +2321,6 @@ def load_and_validate_all(cfg: Dict[str, Any], logger: Any) -> Dict[str, Any]:
                 logger,
                 distribution_catalog,
             )
-            # Keep the normalized/resolved table with the validated load-generation
-            # settings so workers receive it without requiring Model changes or
-            # repeatedly reading the CSV. The leading underscore marks it as an
-            # internal resolved input rather than a user-facing config key.
             load_generation["_hydrology_lookup_table"] = plet_hydrology_lookup
             rusle_inputs = _load_parameter_stats_table(
                 load_generation.get(LOAD_RUSLE_INPUTS), LOAD_RUSLE_INPUTS, logger,
@@ -2415,7 +2389,6 @@ def load_and_validate_all(cfg: Dict[str, Any], logger: Any) -> Dict[str, Any]:
             )
         delivery_ratios = _complete_delivery_ratio_defaults(delivery_ratios, parcel_out_map)
 
-        # Precompute averages for selection heuristics and reporting
         avg_area_ha = float(parcels["area_ha"].mean())
         avg_perim_m = float(parcels["perim_m"].mean())
 
